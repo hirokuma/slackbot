@@ -40,7 +40,7 @@ class MessageDispatcher(object):
 
     def dispatch_msg(self, msg):
         category = msg[0]
-        msg = msg[1]
+        msg = msg[1]['attachments'][0]
         if not self._dispatch_msg_handler(category, msg):
             if category == u'respond_to':
                 if not self._dispatch_msg_handler('default_reply', msg):
@@ -48,7 +48,7 @@ class MessageDispatcher(object):
 
     def _dispatch_msg_handler(self, category, msg):
         responded = False
-        for func, args in self._plugins.get_plugins(category, msg.get('text', None)):
+        for func, args in self._plugins.get_plugins(category, msg.get('pretext', None)):
             if func:
                 responded = True
                 try:
@@ -56,9 +56,9 @@ class MessageDispatcher(object):
                 except:
                     logger.exception(
                         'failed to handle message %s with plugin "%s"',
-                        msg['text'], func.__name__)
+                        msg['pretext'], func.__name__)
                     reply = u'[{}] I had a problem handling "{}"\n'.format(
-                        func.__name__, msg['text'])
+                        func.__name__, msg['pretext'])
                     tb = u'```\n{}\n```'.format(traceback.format_exc())
                     if self._errors_to:
                         self._client.rtm_send_message(msg['channel'], reply)
