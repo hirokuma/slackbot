@@ -13,7 +13,7 @@ from slackbot.utils import WorkerPool
 from slackbot import settings
 
 logger = logging.getLogger(__name__)
-
+textitem = 'text'
 
 class MessageDispatcher(object):
     def __init__(self, slackclient, plugins, errors_to):
@@ -39,8 +39,14 @@ class MessageDispatcher(object):
         self._pool.start()
 
     def dispatch_msg(self, msg):
+        global textitem
         category = msg[0]
-        msg = msg[1]['attachments'][0]
+        try:
+            msg = msg[1]['attachments'][0]
+            textitem = 'pretext'
+        except:
+            msg = msg[1]
+            textitem = 'text'
         if not self._dispatch_msg_handler(category, msg):
             if category == u'respond_to':
                 if not self._dispatch_msg_handler('default_reply', msg):
@@ -48,7 +54,7 @@ class MessageDispatcher(object):
 
     def _dispatch_msg_handler(self, category, msg):
         responded = False
-        for func, args in self._plugins.get_plugins(category, msg.get('pretext', None)):
+        for func, args in self._plugins.get_plugins(category, msg.get(textitem, None)):
             if func:
                 responded = True
                 try:
@@ -56,9 +62,9 @@ class MessageDispatcher(object):
                 except:
                     logger.exception(
                         'failed to handle message %s with plugin "%s"',
-                        msg['pretext'], func.__name__)
+                        msg[textitem], func.__name__)
                     reply = u'[{}] I had a problem handling "{}"\n'.format(
-                        func.__name__, msg['pretext'])
+                        func.__name__, msg[textitem])
                     tb = u'```\n{}\n```'.format(traceback.format_exc())
                     if self._errors_to:
                         self._client.rtm_send_message(msg['channel'], reply)
